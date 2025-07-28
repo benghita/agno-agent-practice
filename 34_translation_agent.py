@@ -7,44 +7,69 @@ from textwrap import dedent
 
 load_dotenv()
 
-agent_instructions = dedent(
-    f"""Follow these steps SEQUENTIALLY to translate text and generate a localized voice note:
-    1. Identify the text to translate and the target language from the user request.
-    2. Translate the text accurately to the target language. Keep this translated text for the final audio generation step.
-    3. Analyze the emotion conveyed by the *translated* text (e.g., neutral, happy, sad, angry, etc.).
-    4. Determine the standard 2-letter language code for the target language (e.g., 'fr' for French, 'es' for Spanish).
-    5. Call the 'list_voices' tool to get a list of available Cartesia voices. Wait for the result.
-    6. Examine the list of voices from the 'list_voices' result. Select the 'id' of an *existing* voice that:
-       a) Matches the target language code (from step 4).
-       b) Best reflects the analyzed emotion (from step 3).
-    7. Call the 'localize_voice' tool to create a new voice. Provide the following arguments:
-       - 'voice_id': The 'base_voice_id' selected in step 6.
-       - 'name': A suitable name for the new voice (e.g., "French Happy Female").
-       - 'description': A description reflecting the language and emotion.
-       - 'language': The target language code (from step 4).
-       - 'original_speaker_gender': User specified gender or the selected base voice gender.
-       Wait for the result of this tool call.
-    8. Check the result of the 'localize_voice' tool call from step 8:
-       a) If the call was successful and returned the details of the newly created voice, extract the 'id' of this **new** voice. This is the 'final_voice_id'.
-    9. Call the 'text_to_speech' tool to generate the audio. Provide:
-        - 'transcript': The translated text from step 2.
-        - 'voice_id': The 'final_voice_id' determined in step 9.
-    """
-)
-
-agent = Agent(
-    name="Emotion-Aware Translator Agent",
-    description="Translates text, analyzes emotion, selects a suitable voice,creates a localized voice, and generates a voice note (audio file) using Cartesia TTStools.",
-    instructions=agent_instructions,
+translation_agent = Agent(
     model=Gemini(id="gemini-2.0-flash"),
+    description=dedent("""You are an intelligent translation and speech-generation agent.
+                   Your job is to:
+                   - Translate user-provided text into a target language.
+                   - Detect the emotional tone of the translated text.
+                   - Select or create a voice that matches the language and emotional tone.
+                   - Generate and return a localized voice note (audio) from the translated text.
+                   """),
+    instructions=dedent(
+        """## 🔧 Tools You Use
+
+            ### 1. `list_voices`
+            Retrieves a list of available Cartesia voices.  
+            Used to select a base voice that matches the target language and emotional tone.
+
+            ---
+
+            ### 2. `localize_voice`
+            Creates a new voice profile using a selected base voice.
+
+            **Required Fields:**
+            - `voice_id`: ID from a voice in `list_voices`
+            - `name`: A name for the new voice (e.g. `"Spanish Angry Male"`)
+            - `description`: Description of the voice
+            - `language`: Language code (e.g. `"es"`)
+            - `original_speaker_gender`: Based on user input or base voice
+
+            ---
+
+            ### 3. `text_to_speech`
+            Generates an audio file from the translated text using the localized voice.
+
+            **Required Fields:**
+            - `transcript`: Translated text
+            - `voice_id`: ID of the localized voice created earlier
+
+            ---
+
+            ## 📋 Workflow
+
+            1. Extract text and target language from user input.
+            2. Translate the text to the target language.
+            3. Analyze the emotion conveyed in the translated text.
+            4. Convert the language to its 2-letter code (e.g., `'de'`, `'fr'`, `'ar'`).
+            5. Use `list_voices` to get voice options.
+            6. Select a voice matching:
+               - Language code
+               - Emotion
+            7. Use `localize_voice` to create a new voice based on the selected one.
+            8. Use `text_to_speech` with the translated text and the new voice ID.
+            9. Return the audio as a localized speech output.
+        """
+    ),
     tools=[CartesiaTools(voice_localize_enabled=True)],
     show_tool_calls=True,
 )
 
-agent.print_response(
-    "Convert this phrase 'hello! how are you? Tell me more about the weather in Paris?' to French and create a voice note"
+translation_agent.print_response(
+   """ Translate the following sentence to French and generate an audio voice note:  
+      'I can't believe I made it! This is amazing!'"""
 )
-response = agent.run_response
+response = translation_agent.run_response
 
 print("\nChecking for Audio Artifacts on Agent...")
 if response.audio:
