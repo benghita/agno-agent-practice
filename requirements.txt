@@ -18,3 +18,5 @@ lxml_html_clean
 tweepy
 youtube_transcript_api
 cartesia
+pandas
+DuckDb

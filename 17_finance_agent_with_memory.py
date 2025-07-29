@@ -5,7 +5,7 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.memory.v2.db.sqlite import SqliteMemoryDb
 from agno.storage.sqlite import SqliteStorage
 from agno.memory.v2.memory import Memory
-from agno.playground import Playground, serve_playground_app
+from agno.playground import Playground
 from dotenv import load_dotenv
 from textwrap import dedent
 
