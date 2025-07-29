@@ -20,3 +20,5 @@ youtube_transcript_api
 cartesia
 pandas
 DuckDb
+mcp
+arxiv
