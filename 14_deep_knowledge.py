@@ -1,21 +1,26 @@
-from agno.agent import Agent
-from agno.team.team import Team
-from agno.models.google import Gemini
-from agno.knowledge.url import UrlKnowledge
-from agno.knowledge.pdf_url import PDFUrlKnowledgeBase
-from agno.knowledge.combined import CombinedKnowledgeBase
-from agno.tools.visualization import VisualizationTools
-from agno.tools.pandas import PandasTools
-from agno.embedder.google import GeminiEmbedder
-from agno.storage.sqlite import SqliteStorage
-from agno.tools.duckdb import DuckDbTools
-from agno.vectordb.lancedb import LanceDb, SearchType
-from agno.tools.file import FileTools
-from dotenv import load_dotenv
-from textwrap import dedent
+# ===================== Imports =====================
+# agno-agent framework imports
+from agno.agent import Agent  # Main Agent class
+from agno.team.team import Team  # Team coordination class
+from agno.models.google import Gemini  # Google Gemini LLM model
+from agno.knowledge.url import UrlKnowledge  # Knowledge base from URLs
+from agno.knowledge.pdf_url import PDFUrlKnowledgeBase  # Knowledge base from PDF URLs
+from agno.knowledge.combined import CombinedKnowledgeBase  # Combined knowledge sources
+from agno.tools.visualization import VisualizationTools  # Chart creation tools
+from agno.tools.pandas import PandasTools  # Data analysis tools
+from agno.embedder.google import GeminiEmbedder  # Embedding model for vector DB
+from agno.storage.sqlite import SqliteStorage  # SQLite-based storage for sessions
+from agno.tools.duckdb import DuckDbTools  # Database query tools
+from agno.vectordb.lancedb import LanceDb, SearchType  # Vector DB with search types
+from agno.tools.file import FileTools  # File operations tools
+from dotenv import load_dotenv  # For loading environment variables
+from textwrap import dedent  # For formatting multi-line strings
 
-load_dotenv()
+# ===================== Load Environment Variables =====================
+load_dotenv()  # Loads variables from a .env file into environment
 
+# ===================== Knowledge Base Setup =====================
+# PDF Knowledge Base - Loads climate policy documents
 pdf_url_kb = PDFUrlKnowledgeBase(
     urls=[
         "https://www.horizont3000.org/media/pages/topics/climate-action/policy/eae40da3a5-1725008907/h3-environmental-climate-policy-2023-en.pdf",
@@ -27,16 +32,18 @@ pdf_url_kb = PDFUrlKnowledgeBase(
     )
 )
 
+# Website Knowledge Base - Loads climate change information from Royal Society
 website_kb = UrlKnowledge(
     urls=["https://royalsociety.org/news-resources/projects/climate-change-evidence-causes/basics-of-climate-change/"],
     vector_db=LanceDb(
         uri="tmp/lancedb",
         table_name="climate-change",
-        search_type=SearchType.hybrid,
+        search_type=SearchType.hybrid,  # Use hybrid search for better results
         embedder=GeminiEmbedder(),
     ),
 )
 
+# Combined Knowledge Base - Merges multiple sources into one searchable base
 knowledge_base = CombinedKnowledgeBase(
     sources=[
         pdf_url_kb,
@@ -49,15 +56,19 @@ knowledge_base = CombinedKnowledgeBase(
     )
 )
 
+# ===================== Storage Setup =====================
+# Configure persistent storage for agent sessions using SQLite
 storage = SqliteStorage(
     table_name="sessions",
     db_file="tmp/agent.db"
 )
 
+# ===================== Knowledge Researcher Agent =====================
+# This agent specializes in synthesizing scientific and policy documents
 knowledge_researcher = Agent(
     role="""Expert Knowledge Researcher specialized in synthesizing scientific and policy documents into comprehensive, 
             well-structured reports with clear sections and proper citations.""",
-    model=Gemini(id="gemini-2.0-flash"),
+    model=Gemini(id="gemini-2.0-flash"),  # LLM model to use
     description=dedent("""
         Retrieves and synthesizes high-quality scientific and policy-related information from vector databases
         Creates detailed, structured articles that are human-readable and evidence-based
@@ -83,16 +94,19 @@ knowledge_researcher = Agent(
         - Clearly identify gaps where data visualization would enhance understanding
         - Use markdown formatting for structure and readability
         """),
-    knowledge=knowledge_base,
-    markdown=True
+    knowledge=knowledge_base,  # Access to combined knowledge sources
+    markdown=True  # Use markdown formatting
 )
 
+# Load the knowledge base into memory
 knowledge_researcher.knowledge.load(recreate=False)
 
+# ===================== Data Analyst & Visualizer Agent =====================
+# This agent specializes in data analysis and chart creation
 analyst_visualizer = Agent(
     role="""Senior Data Analyst & Visualization Specialist focused on creating compelling, publication-ready charts 
             that support climate research and policy analysis.""",
-    model=Gemini(id="gemini-2.0-flash"),
+    model=Gemini(id="gemini-2.0-flash"),  # LLM model to use
     instructions=dedent("""
         DATA ANALYSIS WORKFLOW:
         1. **Data Discovery**: Use DuckDbTools to systematically search for all available CSV files with climate-related data
@@ -125,14 +139,16 @@ analyst_visualizer = Agent(
         - Include a summary of how the visualizations support the research narrative
         - Provide data interpretation that connects charts to policy implications
         """),
-    tools=[DuckDbTools(), VisualizationTools(), PandasTools()],
-    show_tool_calls=True,
-    markdown=True
+    tools=[DuckDbTools(), VisualizationTools(), PandasTools()],  # Data analysis and visualization tools
+    show_tool_calls=True,  # Show tool calls in output
+    markdown=True  # Use markdown formatting
 )
 
+# ===================== Team Leader Agent =====================
+# This agent coordinates the work between the knowledge researcher and data analyst
 leader_agent = Team(
-    members=[analyst_visualizer, knowledge_researcher],
-    model=Gemini(id="gemini-2.0-flash"),
+    members=[analyst_visualizer, knowledge_researcher],  # Team members
+    model=Gemini(id="gemini-2.0-flash"),  # LLM model for team coordination
     description="""Executive Team Leader responsible for coordinating comprehensive climate analysis reports 
         that integrate research findings with data visualizations into professional, actionable documents.""",
     instructions=dedent("""
@@ -195,11 +211,13 @@ leader_agent = Team(
         - Provide the final report file path in your response
         - Ensure the report is self-contained and professional
         """),
-    tools=[FileTools()],
-    storage=storage,
-    show_tool_calls=True,
-    show_members_responses=True,
-    markdown=True
+    tools=[FileTools()],  # File operations tools
+    storage=storage,  # Persistent storage for team sessions
+    show_tool_calls=True,  # Show tool calls in output
+    show_members_responses=True,  # Show responses from team members
+    markdown=True  # Use markdown formatting
 )
 
+# ===================== Execute Team Analysis =====================
+# Run the team analysis on climate change and CO₂ emissions
 leader_agent.print_response("Explain the main contributors to global CO₂ emissions and how they have changed since the industrial revolution. Base the explanation on scientific sources and policies. give a full report with visualisations.")

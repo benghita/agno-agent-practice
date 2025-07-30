@@ -8,7 +8,6 @@ from agno.tools.thinking import ThinkingTools
 from agno.models.google import Gemini
 from agno.utils.media import download_image
 from agno.vectordb.lancedb import LanceDb
-from agno.tools.replicate import ReplicateTools
 from dotenv import load_dotenv
 from textwrap import dedent
 import replicate
@@ -106,11 +105,11 @@ RecipeVisualizerAgent = Agent(
            
            ✅ **Output Format**:
            {
-           `Step 1 Description`: `Generated Image URL 1`,
-           `Step 2 Description`: `Generated Image URL 2`,
+           `Step 1 Description`: `Generated Image URL 1`,    # URL string, not image object
+           `Step 2 Description`: `Generated Image URL 2`,    # URL string, not image object
             ...
            }
-           Make sure to return the images urls not the image objects"""
+           Make sure to return the images urls not the image objects"""  # Clarification for agent output format
     ),
     markdown=True,
     show_tool_calls=True,
@@ -149,6 +148,7 @@ RecipeSimplifierAgent = Team(
 )
 
 # Execute the recipe agent system with a sample query
+# Changed from "Thai curry" to "Papaya Salad" for a different recipe example
 RecipeSimplifierAgent.print_response(
     "Teach me how to make Papaya Salad.",
 )
